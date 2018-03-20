@@ -37,9 +37,9 @@ namespace nonsugar {
         * @param msg   --- メッセージの格納先
         *
         */
-        void Receive(T& msg);
+        void Receive(T* msg);
 
-        void ReceivePolling(T& msg);
+        void ReceivePolling(T* msg);
     };
 
     template <typename T>
@@ -65,7 +65,7 @@ namespace nonsugar {
     }
 
     template <typename T>
-    void MessageQueue<T>::Receive(T& msg)
+    void MessageQueue<T>::Receive(T* msg)
     {
         std::unique_lock<std::mutex> lock(mutex_);
 
@@ -73,12 +73,12 @@ namespace nonsugar {
             cond_.wait(lock, [&]{ return msg_queue_.size(); });
         }
 
-        msg = msg_queue_.front();
+        *msg = msg_queue_.front();
         msg_queue_.pop();
     }
 
     template <typename T>
-    void MessageQueue<T>::ReceivePolling(T& msg)
+    void MessageQueue<T>::ReceivePolling(T* msg)
     {
         std::unique_lock<std::mutex> lock(mutex_);
 
@@ -87,7 +87,7 @@ namespace nonsugar {
             return;
         }
 
-        msg = msg_queue_.front();
+        *msg = msg_queue_.front();
         msg_queue_.pop();
     }
 

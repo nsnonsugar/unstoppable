@@ -1,5 +1,6 @@
 #ifndef sound_player_h_
 #define sound_player_h_
+#include <string>
 #include <SLES/OpenSLES.h>
 #include <SLES/OpenSLES_Android.h>
 

@@ -1,25 +1,17 @@
 ﻿#include <stdint.h>
-#include <stdlib.h>
 #include <GLES/gl.h>
 
 #include "platform_dependent.h"
-#include "Message.h"
 #include "draw_thread.h"
 
 namespace nonsugar{
-struct InitMsg {
-    android_app *app;
-};
 
 void OnAppCmd(android_app *app, int32_t cmd) {
-    ThreadMsg msg;
-
     switch (cmd) {
         case APP_CMD_INIT_WINDOW: {
-            msg.event_id = static_cast<int32_t>(nonsugar::DrawEventId::kInitDisplay);
-            InitMsg *p = (InitMsg *)malloc(sizeof(InitMsg *));
-            p->app = app;
-            msg.data = p;
+            std::shared_ptr<InitMsg> msg = std::make_shared<InitMsg>();
+            msg->event_id = static_cast<int32_t>(nonsugar::DrawEventId::kInitDisplay);
+            msg->app = app;
             SendMsg(MsgQueueIdDraw, msg);
             break;
         }
@@ -33,15 +25,14 @@ int32_t OnInput(android_app *app, AInputEvent *event) {
     (void) app;
     (void) event;
 
-    ThreadMsg msg;
-    msg.event_id = static_cast<int32_t>(nonsugar::DrawEventId::kStoppable);
-    msg.data = nullptr;
+    auto msg = std::make_shared<ThreadMsg>();
+    msg->event_id = static_cast<int32_t>(nonsugar::DrawEventId::kStoppable);
     SendMsg(MsgQueueIdDraw, msg);
     return 0;
 }
 
 void InitDisplay(void *platform_data, EGLDisplay *out_display, EGLSurface *out_surface) {
-    InitMsg *data = static_cast<InitMsg *>(platform_data);
+     auto app = static_cast<android_app*>(platform_data);
 
     const EGLint attribs[] = {
             EGL_RENDERABLE_TYPE, EGL_OPENGL_ES2_BIT,
@@ -64,9 +55,9 @@ void InitDisplay(void *platform_data, EGLDisplay *out_display, EGLSurface *out_s
 
     EGLint format;
     eglGetConfigAttrib(display, config, EGL_NATIVE_VISUAL_ID, &format);
-    ANativeWindow_setBuffersGeometry(data->app->window, 0, 0, format);
+    ANativeWindow_setBuffersGeometry(app->window, 0, 0, format);
 
-    EGLSurface surface = eglCreateWindowSurface(display, config, data->app->window, nullptr);
+    EGLSurface surface = eglCreateWindowSurface(display, config, app->window, nullptr);
     EGLContext context = eglCreateContext(display, config, EGL_NO_CONTEXT, contextAttribs);
 
     if (eglMakeCurrent(display, surface, surface, context) == EGL_FALSE) {

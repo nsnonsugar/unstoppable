@@ -8,7 +8,6 @@ enum class DrawEventId : int32_t {
     kUnstoppable,
     kStoppable,
     kExit,
-    kEmpty,
 };
 
 void draw_thread(void);

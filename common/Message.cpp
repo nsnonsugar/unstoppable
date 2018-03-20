@@ -6,7 +6,7 @@ namespace nonsugar{
 
 struct MessageManage{
     int32_t queue_num;
-    MessageQueue<ThreadMsg>* queue[kMsgQueueMaxNum];
+    MessageQueue<std::shared_ptr<ThreadMsg>>* queue[kMsgQueueMaxNum];
 };
 
 MessageManage message_;
@@ -32,8 +32,8 @@ void CreateMessageQueue(const MessageConfig* config, int32_t num){
             continue;
         }
 
-        if(config[i].queue_id < MsgQueuIdMax){
-            message_.queue[config[i].queue_id] = new(MessageQueue<ThreadMsg>);
+        if(config[i].queue_id < MsgQueueIdMax){
+            message_.queue[config[i].queue_id] = new(MessageQueue<std::shared_ptr<ThreadMsg>>);
             ++message_.queue_num;
         }else{
             //0～kMsgQueueMaxNum1以上のIDは無効
@@ -50,15 +50,15 @@ void DeleteMessageQueue(void){
     }
 }
 
-void ReceiveMsg( MsgQueueID queue_id, ThreadMsg& msg){
+void ReceiveMsg( MsgQueueID queue_id, std::shared_ptr<ThreadMsg>* msg){
     message_.queue[queue_id]->Receive(msg);
 }
 
-void ReceiveMsgPolling( MsgQueueID queue_id, ThreadMsg& msg){
+void ReceiveMsgPolling( MsgQueueID queue_id, std::shared_ptr<ThreadMsg>* msg){
     message_.queue[queue_id]->ReceivePolling(msg);
 }
 
-void SendMsg( MsgQueueID queue_id, const ThreadMsg& msg){
+void SendMsg( MsgQueueID queue_id, const std::shared_ptr<ThreadMsg>& msg){
     message_.queue[queue_id]->Send(msg);
 }
 

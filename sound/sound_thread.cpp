@@ -1,6 +1,5 @@
 #include <stdlib.h>
 #include <string.h>
-#include "Message.h"
 #include "sound_player.h"
 #include "sound_thread.h"
 
@@ -16,9 +15,9 @@ enum class PlayState : int32_t{
 SoundPlayer* sound_player_;
 PlayState play_state_;
 
-static void OnPlayRequest(const ThreadMsg& msg);
-static void OnPauseRequest(const ThreadMsg& msg);
-static void OnStopRequest(const ThreadMsg& msg);
+static void OnPlayRequest(const std::shared_ptr<ThreadMsg>& msg);
+static void OnPauseRequest(const std::shared_ptr<ThreadMsg>& msg);
+static void OnStopRequest(const std::shared_ptr<ThreadMsg>& msg);
 
 void Sound_Thread(void){
     //グローバル変数の初期化
@@ -26,11 +25,11 @@ void Sound_Thread(void){
     sound_player_ = new(SoundPlayer);
 
     play_state_ = PlayState::Stop;
-    ThreadMsg msg = {0};
 
     while(1){
-        ReceiveMsg(MsgQueueIdSound, msg);
-        switch(static_cast<SoundEventId>(msg.event_id)){
+        std::shared_ptr<ThreadMsg> msg;
+        ReceiveMsg(MsgQueueIdSound, &msg);
+        switch(static_cast<SoundEventId>(msg->event_id)){
             case SoundEventId::kPlayRequest:
                 OnPlayRequest(msg);
                 break;
@@ -46,51 +45,37 @@ void Sound_Thread(void){
             case SoundEventId::kExit:
                 return;
         }
-
-        if(msg.data != nullptr){
-            free(msg.data);
-        }
     }
 }
-void SendPlayRequestMsg(const char* file_name, bool is_loop){
-    //malloc失敗時の処理
-    ThreadMsg msg;
-    msg.event_id = static_cast<int32_t>(SoundEventId::kPlayRequest);
+void SendPlayRequestMsg(const std::string& file_name, bool is_loop){
+    auto msg = std::make_shared<PlaySoundMsg>();
+    msg->event_id = static_cast<int32_t>(SoundEventId::kPlayRequest);
 
-    PlaySoundMsg* snd = (PlaySoundMsg*)malloc(sizeof(PlaySoundMsg));
-
-    char* name = (char*)malloc(strlen(file_name) + 1);
-    memset(name, '\0', strlen(file_name) + 1);
-    strncpy(name, file_name, strlen(file_name));
-
-    snd->file_name = name;
-    snd->is_loop = is_loop;
-    msg.data = snd;
+    msg->file_name = file_name;
+    msg->is_loop = is_loop;
 
     SendMsg(MsgQueueIdSound, msg);
 }
 
 void SendStopRequestMsg(void){
-    ThreadMsg msg;
-    msg.event_id = static_cast<int32_t>(SoundEventId::kStopRequest);
-    msg.data = nullptr;
+    auto msg = std::make_shared<ThreadMsg>();
+    msg->event_id = static_cast<int32_t>(SoundEventId::kStopRequest);
 
     SendMsg(MsgQueueIdSound, msg);
 }
 
-static void OnPlayRequest(const ThreadMsg& msg){
+static void OnPlayRequest(const std::shared_ptr<ThreadMsg>& msg){
     if(play_state_ == PlayState::Play){
         sound_player_->Stop();
     }
 
-    PlaySoundMsg* data = static_cast<PlaySoundMsg*>(msg.data);
-    sound_player_->CreatePlayer(data->file_name, data->is_loop);
+    auto rcv = dynamic_cast<PlaySoundMsg*>(msg.get());
+    sound_player_->CreatePlayer(rcv->file_name, rcv->is_loop);
     sound_player_->Play();
     play_state_ = PlayState::Play;
-    free((void*)data->file_name);
 }
 
-static void OnPauseRequest(const ThreadMsg& msg){
+static void OnPauseRequest(const std::shared_ptr<ThreadMsg>& msg){
     (void)msg;
 
     if(play_state_ != PlayState::Play){
@@ -101,7 +86,7 @@ static void OnPauseRequest(const ThreadMsg& msg){
     play_state_ = PlayState::Pause;
 }
 
-static void OnStopRequest(const ThreadMsg& msg){
+static void OnStopRequest(const std::shared_ptr<ThreadMsg>& msg){
     (void)msg;
 
     if(play_state_ != PlayState::Play){

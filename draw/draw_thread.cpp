@@ -23,7 +23,7 @@ EGLDisplay display_;
 EGLSurface surface_;
 Renderer* render_;
 
-static void OnInitialize(const ThreadMsg *msg);
+static void OnInitialize(const std::shared_ptr<ThreadMsg>& msg);
 static void OnUnstoppable(void);
 static void OnStoppable(void);
 static void OnExit(void);
@@ -35,38 +35,32 @@ void draw_thread(void)
     is_initialize_ = false;
     render_ = nullptr;
 
-    ThreadMsg msg = {0};
     while(1){
         //メッセージ初期化
-        msg.event_id = static_cast<int32_t>(DrawEventId::kEmpty);
-        msg.data = nullptr;
+        std::shared_ptr<ThreadMsg> msg;
 
-        ReceiveMsgPolling(MsgQueueIdDraw, msg);
-        switch(static_cast<DrawEventId>(msg.event_id)){
-            case DrawEventId::kInitDisplay:
-                OnInitialize(&msg);
-                break;
+        ReceiveMsgPolling(MsgQueueIdDraw, &msg);
 
-            case DrawEventId::kUnstoppable:
-                OnUnstoppable();
-                break;
+        if( msg.get() != nullptr) {
+            switch (static_cast<DrawEventId>(msg->event_id)) {
+                case DrawEventId::kInitDisplay:
+                    OnInitialize(msg);
+                    break;
 
-            case DrawEventId::kStoppable:
-                OnStoppable();
-                break;
+                case DrawEventId::kUnstoppable:
+                    OnUnstoppable();
+                    break;
 
-            case DrawEventId::kExit:
-                OnExit();
-                return;
+                case DrawEventId::kStoppable:
+                    OnStoppable();
+                    break;
 
-            case DrawEventId::kEmpty:
-                //nop
-                break;
+                case DrawEventId::kExit:
+                    OnExit();
+                    return;
+            }
         }
 
-        if(msg.data != nullptr){
-            free(msg.data);
-        }
 
         if(render_ != nullptr){
             render_->Rendering();
@@ -77,18 +71,19 @@ void draw_thread(void)
     }
 }
 
-static void OnInitialize(const ThreadMsg *msg)
+static void OnInitialize(const std::shared_ptr<ThreadMsg>& msg)
 {
     if(is_initialize_){
         return;
     }
 
-    InitDisplay(msg->data, &display_, &surface_);
+    auto rcv = dynamic_cast<InitMsg*>(msg.get());
+
+    InitDisplay(rcv->app, &display_, &surface_);
     is_initialize_ = true;
 
-    ThreadMsg snd;
-    snd.event_id = static_cast<int32_t>(DrawEventId::kUnstoppable);
-    snd.data = nullptr;
+    auto snd = std::make_shared<ThreadMsg>();
+    snd->event_id = static_cast<int32_t>(DrawEventId::kUnstoppable);
     SendMsg(MsgQueueIdDraw, snd);
 }
 

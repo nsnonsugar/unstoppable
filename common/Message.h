@@ -2,6 +2,7 @@
 #define MESSAGE_H_
 
 #include <stdint.h>
+#include <memory>
 #include "MessageQueue.h"
 
 namespace nonsugar{
@@ -13,13 +14,13 @@ static constexpr int32_t kMsgQueueMaxNum = 10;
 enum MsgQueueID : int32_t{
     MsgQueueIdDraw = 0,
     MsgQueueIdSound,
-    MsgQueuIdMax = kMsgQueueMaxNum, //キューの有効数はここまで
+    MsgQueueIdMax = kMsgQueueMaxNum, //キューの有効数はここまで
 };
 
 //メッセージ構造体
 struct ThreadMsg{
     int32_t event_id;
-    void* data;
+    virtual ~ThreadMsg(){}
 };
 
 enum class MsgQueueStatus : int8_t{
@@ -58,7 +59,7 @@ void DeleteMessageQueue(void);
 *
 * @attention メッセージを受信するまでブロッキングされる
 */
-void ReceiveMsg(MsgQueueID queue_id, ThreadMsg& msg);
+void ReceiveMsg(MsgQueueID queue_id, std::shared_ptr<ThreadMsg>* msg);
 
 /**
 * メッセージ受信(ポーリング)
@@ -67,7 +68,7 @@ void ReceiveMsg(MsgQueueID queue_id, ThreadMsg& msg);
 * @param msg        --- メッセージの格納先アドレス
 *
 */
-void ReceiveMsgPolling(MsgQueueID queue_id, ThreadMsg& msg);
+void ReceiveMsgPolling(MsgQueueID queue_id, std::shared_ptr<ThreadMsg>* msg);
 
 /**
 * メッセージ送信
@@ -76,7 +77,7 @@ void ReceiveMsgPolling(MsgQueueID queue_id, ThreadMsg& msg);
 * @param msg        --- 送信するメッセージ
 *
 */
-void SendMsg(MsgQueueID queue_id, const ThreadMsg& msg);
+void SendMsg(MsgQueueID queue_id, const std::shared_ptr<ThreadMsg>& msg);
 
 } //namespace nonsugar
 #endif //MESSAGE_H_
