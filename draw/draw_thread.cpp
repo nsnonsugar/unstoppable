@@ -77,7 +77,7 @@ static void OnInitialize(const std::shared_ptr<ThreadMsg>& msg)
         return;
     }
 
-    auto rcv = dynamic_cast<InitMsg*>(msg.get());
+    auto rcv = std::dynamic_pointer_cast<InitMsg>(msg);
 
     InitDisplay(rcv->app, &display_, &surface_);
     is_initialize_ = true;

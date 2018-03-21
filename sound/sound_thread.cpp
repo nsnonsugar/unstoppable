@@ -69,7 +69,7 @@ static void OnPlayRequest(const std::shared_ptr<ThreadMsg>& msg){
         sound_player_->Stop();
     }
 
-    auto rcv = dynamic_cast<PlaySoundMsg*>(msg.get());
+    auto rcv = std::dynamic_pointer_cast<PlaySoundMsg>(msg);
     sound_player_->CreatePlayer(rcv->file_name, rcv->is_loop);
     sound_player_->Play();
     play_state_ = PlayState::Play;
